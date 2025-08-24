@@ -68,8 +68,8 @@ async def send_start(client: Client, message: Message):
     buttons = [[
         InlineKeyboardButton("Developer", url = "tg://settings")
     ],[
-        InlineKeyboardButton('🔞 ᴀᴅᴜʟᴛ ᴄʜᴀᴛ 💦', url='https://t.me/+EN7avEgX4ks5NGRl'),
-        InlineKeyboardButton('💫 ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ', url='https://t.me/all_from_adult_verse')
+        InlineKeyboardButton('A', url='https://google.com'),
+        InlineKeyboardButton('💫 ᴍᴀɪɴ ᴄʜᴀɴɴᴇʟ', url='https://t.me/durov')
     ]]
     reply_markup = InlineKeyboardMarkup(buttons)
     await client.send_message(message.chat.id, f"<b>👋 Hi {message.from_user.mention}, I am Slave Saver Bot, I can send you public channel's restricted contents.\n\nFor more info how to use bot press - /help</b>", reply_markup=reply_markup, reply_to_message_id=message.id)
