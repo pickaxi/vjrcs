@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "7726282640:AAGSWtdGlOoRAlVDDMx_fJhX20BZAtfguD8")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8272818476:AAHIsbGS1Dt7c2aQNDmYyVYqqJVm5deqnHk")
 API_ID = int(os.environ.get("API_ID", "28735699"))
 API_HASH = os.environ.get("API_HASH", "2e19c326d8cb322df7c15d7b7e84d1f3")
 DB_URI = os.environ.get("DB_URI", "mongodb+srv://fixmayart834:FMWwXBd4JJYMs2Iv@cluster0.ltpube9.mongodb.net/?retryWrites=true&w=majority")
