@@ -32,3 +32,27 @@ async def delete_dump(client: Client, message: Message):
 def get_dump_channel():
     dump = dump_collection.find_one({})
     return int(dump["channel_id"]) if dump else None
+
+# NEW /dump command to show current dump channel info
+from pyrogram.errors import ChannelInvalid, ChannelPrivate
+
+@Client.on_message(filters.command(["dump"]) & filters.private)
+async def show_dump_channel(client: Client, message: Message):
+    dump_channel = get_dump_channel()
+    if not dump_channel:
+        await message.reply("❌ Dump channel not set!")
+        return
+
+    try:
+        chat_info = await client.get_chat(dump_channel)
+        channel_name = chat_info.title
+        channel_id = chat_info.id
+        await message.reply(
+            f"✅ <b>Current Dump Channel:</b>\n"
+            f"<b>Channel Name:</b> <code>{channel_name}</code>\n"
+            f"<b>Channel ID:</b> <code>{channel_id}</code>"
+        )
+    except (ChannelInvalid, ChannelPrivate):
+        await message.reply("❌ Dump channel not found or is private!")
+    except Exception as e:
+        await message.reply(f"⚠️ Error: {e}")
