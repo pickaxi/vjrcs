@@ -140,6 +140,7 @@ async def save(client: Client, message: Message):
                     sent_msg = await client.copy_message(message.chat.id, msg.chat.id, msg.id, reply_to_message_id=message.id)
                     dump_channel = get_dump_channel()
                     if dump_channel:
+                        # Yahan change karna hai
                         await client.forward_messages(dump_channel, sent_msg.chat.id, sent_msg.id)
                 except:
                     try:    
@@ -155,6 +156,7 @@ async def save(client: Client, message: Message):
                         await client.send_message(message.chat.id, f"Error: {e}", reply_to_message_id=message.id)
 
             await asyncio.sleep(3)
+
 
 async def handle_private(client: Client, acc, message: Message, chatid: int, msgid: int):
     msg: Message = await acc.get_messages(chatid, msgid)
