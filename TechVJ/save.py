@@ -507,6 +507,3 @@ app = Client("my_bot", api_id=API_ID, api_hash=API_HASH)
 
 if __name__ == "__main__":
     app.run()
-
-
-    
