@@ -1,13 +1,12 @@
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import Message, CallbackQuery
+from pyrogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.db import dump_collection
 from config import ADMINS
-from Helpers.Keyboards import ButtonMaker
 
 SETTING_TIMEOUT_SECONDS = 60
 
-# FSM memory: {user_id: {"state": ..., "message_id": ...}}
+# FSM state memory
 USER_STATE = {}
 
 def is_admin(user_id):
@@ -40,21 +39,20 @@ def destination_text(error=None):
     return txt
 
 def main_settings_kb():
-    bm = ButtonMaker()
-    bm.data_button("ᴅᴇꜱᴛɪɴᴀᴛɪᴏɴ", "dumpset destination")
-    bm.new_row()
-    bm.data_button("CLOSE", "dumpset close", position="footer")
-    return bm.build_menu(2)
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("ᴅᴇꜱᴛɪɴᴀᴛɪᴏɴ", callback_data="dumpset_destination")],
+        [InlineKeyboardButton("CLOSE", callback_data="dumpset_close")]
+    ])
 
 def destination_kb():
-    bm = ButtonMaker()
-    bm.data_button("⏪ ᴍᴀɪɴ ᴍᴇɴᴜ", "dumpset main")
-    bm.data_button("❌ Remove Destination", "dumpset remove_dest")
-    bm.new_row()
-    bm.data_button("CLOSE", "dumpset close", position="footer")
-    return bm.build_menu(2)
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⏪ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="dumpset_main"),
+            InlineKeyboardButton("❌ Remove Destination", callback_data="dumpset_remove_dest")
+        ],
+        [InlineKeyboardButton("CLOSE", callback_data="dumpset_close")]
+    ])
 
-# Timeout utility
 def start_timeout_task(client, user_id, msg, state):
     s = USER_STATE[user_id]
     if "timeout_task" in s and s["timeout_task"]:
@@ -68,7 +66,6 @@ async def timeout_settings(client, user_id, msg, state):
     s = USER_STATE.get(user_id)
     if not s or s.get("state") != state:
         return
-    # Timeout: back to main menu
     await msg.edit_text(
         main_settings_text(),
         reply_markup=main_settings_kb()
@@ -91,7 +88,7 @@ async def open_settings(client: Client, message: Message):
         "timeout_task": None
     }
 
-@Client.on_callback_query(filters.regex(r"^dumpset (\w+)$"))
+@Client.on_callback_query(filters.regex(r"^dumpset_(\w+)$"))
 async def handle_buttons(client: Client, call: CallbackQuery):
     user_id = call.from_user.id
     if not is_admin(user_id):
@@ -185,7 +182,6 @@ async def handle_destination_input(client: Client, message: Message):
         if message.id != msg_id:
             await message.delete()
     except Exception:
-        # Invalid
         await msg.edit_text(
             destination_text(error="Invalid chat ID. Please enter a valid one (e.g., -1001234567890) or /cancel."),
             reply_markup=destination_kb()
