@@ -147,17 +147,25 @@ async def handle_destination_input(client: Client, message: Message):
         s["timeout_task"].cancel()
         s["timeout_task"] = None
 
+    # Get the message_id to edit
+    msg_id = s.get("message_id")
+    if not msg_id:
+        return
+    try:
+        msg = await client.get_messages(message.chat.id, msg_id)
+    except Exception:
+        return
+
     # Handle /cancel
     if message.text.strip().lower() == "/cancel":
         s.clear()
         s["state"] = "main_menu"
-        s["message_id"] = s.get("message_id")
-        msg = await client.get_messages(message.chat.id, s["message_id"])
+        s["message_id"] = msg_id
         await msg.edit_text(
             main_settings_text(),
             reply_markup=main_settings_kb()
         )
-        if message.id != s["message_id"]:
+        if message.id != msg_id:
             await message.delete()
         return
 
@@ -168,18 +176,16 @@ async def handle_destination_input(client: Client, message: Message):
         dump_collection.insert_one({"channel_id": channel_id})
         s.clear()
         s["state"] = "main_menu"
-        s["message_id"] = s.get("message_id")
-        msg = await client.get_messages(message.chat.id, s["message_id"])
+        s["message_id"] = msg_id
         await msg.edit_text(
             f"✅ Destination set to <code>{channel_id}</code>\n\n" +
             main_settings_text().replace("Not Set", f"<code>{channel_id}</code>"),
             reply_markup=main_settings_kb()
         )
-        if message.id != s["message_id"]:
+        if message.id != msg_id:
             await message.delete()
     except Exception:
         # Invalid
-        msg = await client.get_messages(message.chat.id, s["message_id"])
         await msg.edit_text(
             destination_text(error="Invalid chat ID. Please enter a valid one (e.g., -1001234567890) or /cancel."),
             reply_markup=destination_kb()
