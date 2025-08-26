@@ -1,4 +1,5 @@
 import asyncio
+import pyrogram 
 import os
 import sys
 import random
