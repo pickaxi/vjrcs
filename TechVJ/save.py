@@ -687,8 +687,3 @@ async def handle_destination_input(client: Client, message: Message):
             reply_markup=destination_kb()
         )
         start_timeout_task(client, user_id, msg, "awaiting_destination")
-
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH)
-
-if __name__ == "__main__":
-    app.run()
