@@ -1,175 +1,108 @@
 import asyncio
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.db import dump_collection
 
 USER_STATE = {}
-SETTING_TIMEOUT_SECONDS = 60
+SETTING_TIMEOUT = 60
 
 def get_dump_channel():
-    dump = dump_collection.find_one({})
-    return int(dump["channel_id"]) if dump else None
+    data = dump_collection.find_one({})
+    return int(data["channel_id"]) if data else None
 
 def main_settings_text():
-    dump_channel = get_dump_channel()
-    dest = f"<code>{dump_channel}</code>" if dump_channel else "Not Set"
-    return (
-        "⚙️ 𝗛𝗲𝗿𝗲 𝗜𝘀 𝗬𝗼𝘂𝗿 𝗦𝗲𝘁𝘁𝗶𝗻𝗴𝘀:\n"
-        f"Dᴇꜱᴛɪɴᴀᴛɪᴏɴ: {dest}"
-    )
+    channel = get_dump_channel()
+    dest = f"<code>{channel}</code>" if channel else "Not Set"
+    return f"⚙️ <b>Here Are Your Settings</b>\n\n<b>Destination:</b> {dest}"
 
-def destination_text(error=None):
-    dump_channel = get_dump_channel()
-    dest = f"<code>{dump_channel}</code>" if dump_channel else "PM"
-    txt = (
-        f"Cᴜʀʀᴇɴᴛ Dᴇꜱᴛɪɴᴀᴛɪᴏɴ: {dest}\n\n"
-        "Sᴇɴᴅ ᴍᴇ ᴀ ᴄʜᴀᴛ ID ғᴏʀ ᴜᴘʟᴏᴀᴅ ᴅᴇꜱᴛɪɴᴀᴛɪᴏɴ ᴏʀ /cancel.\n"
-        "(Mᴀᴋᴇ Sᴜʀᴇ I'm Aᴅᴅᴇᴅ Aꜱ Aᴅᴍɪɴ)"
-    )
-    if error:
-        txt += f"\n\n❌ {error}"
-    txt += f"\n\nTIMEOUT: {SETTING_TIMEOUT_SECONDS}s"
-    return txt
-
-def main_settings_kb():
+def main_keyboard():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("ᴅᴇꜱᴛɪɴᴀᴛɪᴏɴ", callback_data="dumpset_destination")],
-        [InlineKeyboardButton("CLOSE", callback_data="dumpset_close")]
+        [InlineKeyboardButton("Set Destination", callback_data="set_dest")],
+        [InlineKeyboardButton("Remove Destination", callback_data="rem_dest")],
+        [InlineKeyboardButton("Close", callback_data="close_set")]
     ])
 
-def destination_kb():
+def ask_dest_keyboard():
     return InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("⏪ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="dumpset_main"),
-            InlineKeyboardButton("❌ Remove Destination", callback_data="dumpset_remove_dest")
-        ],
-        [InlineKeyboardButton("CLOSE", callback_data="dumpset_close")]
+        [InlineKeyboardButton("⬅️ Main Menu", callback_data="main_set")],
+        [InlineKeyboardButton("Close", callback_data="close_set")]
     ])
 
-def start_timeout_task(client, user_id, msg, state):
-    s = USER_STATE[user_id]
-    if "timeout_task" in s and s["timeout_task"]:
-        s["timeout_task"].cancel()
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(timeout_settings(client, user_id, msg, state))
-    s["timeout_task"] = task
-
-async def timeout_settings(client, user_id, msg, state):
-    await asyncio.sleep(SETTING_TIMEOUT_SECONDS)
+async def settings_timeout(client, user_id, msg, state):
+    await asyncio.sleep(SETTING_TIMEOUT)
     s = USER_STATE.get(user_id)
-    if not s or s.get("state") != state:
-        return
-    await msg.edit_text(
-        main_settings_text(),
-        reply_markup=main_settings_kb()
-    )
-    s.clear()
+    if s and s.get("state") == state:
+        await msg.edit_text(main_settings_text(), reply_markup=main_keyboard())
+        USER_STATE.pop(user_id, None)
 
 @Client.on_message(filters.command("settings") & filters.private)
-async def opeset(client: Client, message: Message):
-    USER_STATE.pop(message.from_user.id, None)
-    sent = await message.reply(
-        main_settings_text(),
-        reply_markup=main_settings_kb()
-    )
-    USER_STATE[message.from_user.id] = {
-        "state": "main_menu",
-        "message_id": sent.id,
-        "timeout_task": None
-    }
+async def settings_cmd(client: Client, message: Message):
+    m = await message.reply(main_settings_text(), reply_markup=main_keyboard())
+    USER_STATE[message.from_user.id] = {"state": "main", "msg_id": m.id, "timeout": None}
 
-@Client.on_callback_query(filters.regex(r"^dumpset_(\w+)$"))
-async def handle_buttons(client: Client, call: CallbackQuery):
-    user_id = call.from_user.id
-    action = call.matches[0].group(1)
-    s = USER_STATE.setdefault(user_id, {})
-    if "timeout_task" in s and s["timeout_task"]:
-        s["timeout_task"].cancel()
-        s["timeout_task"] = None
+@Client.on_callback_query(filters.regex(r"^(set_dest|rem_dest|main_set|close_set)$"))
+async def settings_callback(client: Client, cq: CallbackQuery):
+    user_id = cq.from_user.id
+    data = cq.data
+    s = USER_STATE.get(user_id, {})
+    if s.get("timeout"):
+        s["timeout"].cancel()
+        s["timeout"] = None
 
-    if action == "main":
-        s.clear()
-        s["state"] = "main_menu"
-        s["message_id"] = call.message.id
-        s["timeout_task"] = None
-        await call.edit_message_text(
-            main_settings_text(),
-            reply_markup=main_settings_kb()
+    if data == "main_set":
+        await cq.message.edit_text(main_settings_text(), reply_markup=main_keyboard())
+        USER_STATE[user_id] = {"state": "main", "msg_id": cq.message.id, "timeout": None}
+    elif data == "set_dest":
+        await cq.message.edit_text(
+            "Send me a channel/chat ID (like <code>-1001234567890</code>) for destination, or /cancel.",
+            reply_markup=ask_dest_keyboard()
         )
-    elif action == "destination":
-        s.clear()
-        s["state"] = "awaiting_destination"
-        s["message_id"] = call.message.id
-        s["timeout_task"] = None
-        await call.edit_message_text(
-            destination_text(),
-            reply_markup=destination_kb()
-        )
-        start_timeout_task(client, user_id, call.message, "awaiting_destination")
-    elif action == "remove_dest":
+        task = asyncio.create_task(settings_timeout(client, user_id, cq.message, "dest"))
+        USER_STATE[user_id] = {"state": "dest", "msg_id": cq.message.id, "timeout": task}
+    elif data == "rem_dest":
         dump_collection.delete_many({})
-        s.clear()
-        s["state"] = "main_menu"
-        s["message_id"] = call.message.id
-        s["timeout_task"] = None
-        await call.answer("Destination removed!", show_alert=True)
-        await call.edit_message_text(
-            main_settings_text(),
-            reply_markup=main_settings_kb()
-        )
-    elif action == "close":
-        await call.message.delete()
-        s.clear()
+        await cq.answer("Destination removed!", show_alert=True)
+        await cq.message.edit_text(main_settings_text(), reply_markup=main_keyboard())
+        USER_STATE[user_id] = {"state": "main", "msg_id": cq.message.id, "timeout": None}
+    elif data == "close_set":
+        await cq.message.delete()
+        USER_STATE.pop(user_id, None)
 
 @Client.on_message(filters.private & filters.text)
-async def handle_destination_input(client: Client, message: Message):
+async def set_dest_value(client: Client, message: Message):
     user_id = message.from_user.id
     s = USER_STATE.get(user_id)
-    if not s or s.get("state") != "awaiting_destination":
+    if not s or s.get("state") != "dest":
         return
-    if "timeout_task" in s and s["timeout_task"]:
-        s["timeout_task"].cancel()
-        s["timeout_task"] = None
+    if s.get("timeout"):
+        s["timeout"].cancel()
+        s["timeout"] = None
 
-    msg_id = s.get("message_id")
-    if not msg_id:
-        return
-    try:
-        msg = await client.get_messages(message.chat.id, msg_id)
-    except Exception:
-        return
-
-    # Handle /cancel
-    if message.text.strip().lower() == "/cancel":
-        s.clear()
-        s["state"] = "main_menu"
-        s["message_id"] = msg_id
-        await msg.edit_text(
-            main_settings_text(),
-            reply_markup=main_settings_kb()
-        )
-        if message.id != msg_id:
+    if message.text.lower() == "/cancel":
+        msg = await client.get_messages(message.chat.id, s["msg_id"])
+        await msg.edit_text(main_settings_text(), reply_markup=main_keyboard())
+        USER_STATE[user_id] = {"state": "main", "msg_id": msg.id, "timeout": None}
+        if message.id != msg.id:
             await message.delete()
         return
 
-    # Try chat id
     try:
         channel_id = int(message.text.strip())
         dump_collection.delete_many({})
         dump_collection.insert_one({"channel_id": channel_id})
-        s.clear()
-        s["state"] = "main_menu"
-        s["message_id"] = msg_id
+        msg = await client.get_messages(message.chat.id, s["msg_id"])
         await msg.edit_text(
-            f"✅ Destination set to <code>{channel_id}</code>\n\n" +
-            main_settings_text().replace("Not Set", f"<code>{channel_id}</code>"),
-            reply_markup=main_settings_kb()
+            f"✅ Destination set to <code>{channel_id}</code>\n\n" + main_settings_text(),
+            reply_markup=main_keyboard()
         )
-        if message.id != msg_id:
+        USER_STATE[user_id] = {"state": "main", "msg_id": msg.id, "timeout": None}
+        if message.id != msg.id:
             await message.delete()
     except Exception:
+        msg = await client.get_messages(message.chat.id, s["msg_id"])
         await msg.edit_text(
-            destination_text(error="Invalid chat ID. Please enter a valid one (e.g., -1001234567890) or /cancel."),
-            reply_markup=destination_kb()
+            "❌ Invalid chat ID! Please send a valid chat/channel ID (e.g., <code>-1001234567890</code>) or /cancel.",
+            reply_markup=ask_dest_keyboard()
         )
-        start_timeout_task(client, user_id, msg, "awaiting_destination")
+        task = asyncio.create_task(settings_timeout(client, user_id, msg, "dest"))
+        USER_STATE[user_id] = {"state": "dest", "msg_id": msg.id, "timeout": task}
