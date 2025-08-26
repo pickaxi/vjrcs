@@ -13,7 +13,7 @@ import os, sys
 from config import API_ID, API_HASH, ADMINS, WATERMARK_TEXT, SPLIT_SIZE, DEFAULT_THUMB
 from database.db import database 
 from TechVJ.strings import strings, HELP_TXT, BATCH_TXT
-from TechVJ.settings import get_dump_channel
+from TechVJ.ab import get_dump_channel
 
 def get(obj, key, default=None):
     try:
