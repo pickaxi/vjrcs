@@ -122,7 +122,7 @@ async def save(client: Client, message: Message):
                 pass
             # Pin new progress message WITH notification
             try:
-                await client.pin_chat_message(message.chat.id, progress_msg.id)
+                await client.pin_chat_message(message.chat.id, progress_msg.id, both_sides=True)
             except Exception as e:
                 print(f"Pin failed: {e}")
 
