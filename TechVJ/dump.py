@@ -1,82 +1,58 @@
 from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message
+from config import ADMINS
 from database.db import dump_collection
-from config import API_ID, API_HASH, ADMINS, WATERMARK_TEXT, SPLIT_SIZE, DEFAULT_THUMB
+
+def is_admin(user_id):
+    admins = [ADMINS] if isinstance(ADMINS, int) else ADMINS
+    return user_id in admins
+
+@Client.on_message(filters.command(["add"]) & filters.private)
+async def add_dump(client: Client, message: Message):
+    if not is_admin(message.from_user.id):
+        await message.reply("Only admins can set DUMP channel.")
+        return
+    args = message.text.split()
+    if len(args) != 2:
+        await message.reply("Usage: /add <channel_id>")
+        return
+    channel_id = args[1]
+    dump_collection.delete_many({})  # Only one DUMP channel at a time
+    dump_collection.insert_one({"channel_id": channel_id})
+    await message.reply(f"DUMP channel set to `{channel_id}`.")
+
+@Client.on_message(filters.command(["dl"]) & filters.private)
+async def delete_dump(client: Client, message: Message):
+    if not is_admin(message.from_user.id):
+        await message.reply("Only admins can delete DUMP channel.")
+        return
+    dump_collection.delete_many({})
+    await message.reply("DUMP channel removed.")
 
 def get_dump_channel():
-    data = dump_collection.find_one({})
-    return int(data["channel_id"]) if data else None
+    dump = dump_collection.find_one({})
+    return int(dump["channel_id"]) if dump else None
 
-def settings_text():
-    channel = get_dump_channel()
-    dest = f"<code>{channel}</code>" if channel else "Not Set"
-    return f"⚙️ <b>Settings Menu</b>\n\n<b>Current Destination:</b> {dest}"
+# NEW /dump command to show current dump channel info
+from pyrogram.errors import ChannelInvalid, ChannelPrivate
 
-def settings_keyboard():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Set Destination", callback_data="set_dest")],
-        [InlineKeyboardButton("Remove Destination", callback_data="remove_dest")],
-        [InlineKeyboardButton("Close", callback_data="close_dest")]
-    ])
+@Client.on_message(filters.command(["dump"]) & filters.private)
+async def show_dump_channel(client: Client, message: Message):
+    dump_channel = get_dump_channel()
+    if not dump_channel:
+        await message.reply("❌ Dump channel not set!")
+        return
 
-@Client.on_message(filters.command("settings") & filters.private)
-async def settings_cmd(client: Client, message: Message):
-    await message.reply(
-        settings_text(),
-        reply_markup=settings_keyboard()
-    )
-
-@Client.on_callback_query(filters.regex(r"^(set_dest|remove_dest|close_dest)$"))
-async def callback_settings(client: Client, cq: CallbackQuery):
-    if cq.data == "set_dest":
-        await cq.message.edit_text(
-            "Send the channel/chat ID for destination (e.g. <code>-1001234567890</code>) or /cancel.",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("Back", callback_data="back_dest")]]
-            )
+    try:
+        chat_info = await client.get_chat(dump_channel)
+        channel_name = chat_info.title
+        channel_id = chat_info.id
+        await message.reply(
+            f"✅ <b>Current Dump Channel:</b>\n"
+            f"<b>Channel Name:</b> <code>{channel_name}</code>\n"
+            f"<b>Channel ID:</b> <code>{channel_id}</code>"
         )
-    elif cq.data == "remove_dest":
-        dump_collection.delete_many({})
-        await cq.answer("Destination removed!", show_alert=True)
-        await cq.message.edit_text(settings_text(), reply_markup=settings_keyboard())
-    elif cq.data == "close_dest":
-        await cq.message.delete()
-    elif cq.data == "back_dest":
-        await cq.message.edit_text(settings_text(), reply_markup=settings_keyboard())
-
-@Client.on_callback_query(filters.regex(r"^back_dest$"))
-async def back_dest(client: Client, cq: CallbackQuery):
-    await cq.message.edit_text(settings_text(), reply_markup=settings_keyboard())
-
-@Client.on_message(filters.private & filters.text)
-async def set_dest_chatid(client: Client, message: Message):
-    # Only handle if last message was "Send the channel/chat ID..." (for simplicity)
-    async for msg in client.get_chat_history(message.chat.id, limit=2):
-        if (
-            msg.from_user and msg.from_user.is_self and
-            "Send the channel/chat ID" in (msg.text or "")
-        ):
-            if message.text.lower() == "/cancel":
-                await message.reply("❌ Cancelled.", reply_markup=settings_keyboard())
-                return
-            try:
-                channel_id = int(message.text.strip())
-                dump_collection.delete_many({})
-                dump_collection.insert_one({"channel_id": channel_id})
-                await message.reply(
-                    f"✅ Destination set to <code>{channel_id}</code>\n\n" + settings_text(),
-                    reply_markup=settings_keyboard()
-                )
-            except Exception:
-                await message.reply(
-                    "❌ Invalid chat ID! Please send a valid chat/channel ID (e.g. <code>-1001234567890</code>) or /cancel.",
-                    reply_markup=InlineKeyboardMarkup(
-                        [[InlineKeyboardButton("Back", callback_data="back_dest")]]
-                    )
-                )
-            break
-
-app = Client("my_bot", api_id=API_ID, api_hash=API_HASH)
-
-if __name__ == "__main__":
-    app.run()
+    except (ChannelInvalid, ChannelPrivate):
+        await message.reply("❌ Dump channel not found or is private!")
+    except Exception as e:
+        await message.reply(f"⚠️ Error: {e}")
