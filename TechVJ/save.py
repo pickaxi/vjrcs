@@ -573,7 +573,7 @@ async def timeout_settings(client, user_id, msg, state):
     s.clear()
 
 @Client.on_message(filters.command("settings") & filters.private)
-async def open_settings(client: Client, message: Message):
+async def opeset(client: Client, message: Message):
     if not is_admin(message.from_user.id):
         await message.reply("Only admins can use settings.")
         return
