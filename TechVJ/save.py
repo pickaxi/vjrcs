@@ -95,9 +95,9 @@ async def restart_command(client: Client, message: Message):
     await h.delete()
     os.execl(sys.executable, sys.executable, *sys.argv)
 
+
 @Client.on_message(filters.text & filters.private)
 async def save(client: Client, message: Message):
-    # Universal batch progress logic
     if "https://t.me/" in message.text:
         datas = message.text.split("/")
         temp = datas[-1].replace("?single", "").split("-")
@@ -108,25 +108,28 @@ async def save(client: Client, message: Message):
             toID = fromID
 
         total = toID - fromID + 1 if toID >= fromID else 1
-        # Send & pin universal progress message if batch
         progress_msg = None
+        markup = InlineKeyboardMarkup(
+            [
+                [InlineKeyboardButton("Updates", url="https://t.me/EchoBotz")]
+            ]
+        )
+
         if total > 1:
             progress_msg = await client.send_message(
                 message.chat.id,
-                f"Progress Status\nStarted\n1/{total}"
+                f"Progress Status\nStarted\n1/{total}",
+                reply_markup=markup
             )
-            # Unpin previous pinned message (if any)
             try:
                 await client.unpin_chat_message(message.chat.id)
             except Exception:
                 pass
-            # Pin new progress message WITH notification
             try:
                 await client.pin_chat_message(message.chat.id, progress_msg.id, both_sides=True)
             except Exception as e:
                 print(f"Pin failed: {e}")
 
-        # Loop and process batch
         for idx, msgid in enumerate(range(fromID, toID + 1), start=1):
             if "https://t.me/c/" in message.text:
                 user_data = database.find_one({'chat_id': message.chat.id})
@@ -173,13 +176,13 @@ async def save(client: Client, message: Message):
                     except Exception as e:
                         await client.send_message(message.chat.id, f"Error: {e}", reply_to_message_id=message.id)
 
-            # Update pinned progress message
             if progress_msg:
                 try:
                     await client.edit_message_text(
                         message.chat.id,
                         progress_msg.id,
-                        f"Progress Status\nStarted\n{idx}/{total}"
+                        f"Progress Status\nStarted\n{idx}/{total}",
+                        reply_markup=markup
                     )
                 except Exception:
                     pass
