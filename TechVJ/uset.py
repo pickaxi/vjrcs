@@ -1,6 +1,7 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from database.db import dump_collection
+from config import API_ID, API_HASH, ADMINS, WATERMARK_TEXT, SPLIT_SIZE, DEFAULT_THUMB
 
 def get_dump_channel():
     data = dump_collection.find_one({})
