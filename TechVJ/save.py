@@ -503,5 +503,10 @@ def get_message_type(msg: pyrogram.types.messages_and_media.message.Message):
         return "Text"
     return "Unknown"
 
+app = Client("my_bot", api_id=API_ID, api_hash=API_HASH)
+
+if __name__ == "__main__":
+    app.run()
+
 
     
