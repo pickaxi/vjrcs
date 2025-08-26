@@ -1,5 +1,6 @@
 import asyncio
-import pyrogram
+import os
+import sys
 import random
 import requests
 import numpy as np
@@ -7,9 +8,9 @@ from PIL import Image, ImageDraw, ImageFont
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from pyrogram import Client, filters
 from pyrogram.errors import FloodWait, UsernameNotOccupied
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 import time
-import os, sys
+
 from config import API_ID, API_HASH, ADMINS, WATERMARK_TEXT, SPLIT_SIZE, DEFAULT_THUMB
 from database.db import database, dump_collection
 from TechVJ.strings import strings, HELP_TXT, BATCH_TXT
