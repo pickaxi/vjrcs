@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8246933872:AAEW7FWLDdoBmLAgeSwpkZ9WcyriRx--wpI")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8435997614:AAED4CswYCi0empj6a7ysCK-1VTuzMQTOMQ")
 API_ID = int(os.environ.get("API_ID", "28735699"))
 API_HASH = os.environ.get("API_HASH", "2e19c326d8cb322df7c15d7b7e84d1f3")
 DB_URI = os.environ.get("DB_URI", "mongodb+srv://ridhatlog:RcZ4EVi6hzwSaarZ@cluster0.dxj0ntg.mongodb.net/?retryWrites=true&w=majority")
