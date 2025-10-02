@@ -27,7 +27,7 @@ def get(obj, key, default=None):
     except:
         return default
 
-@Client.on_message(filters.private & ~filters.forwarded & filters.command(["disconnect"]))
+@Client.on_message(filters.private & ~filters.forwarded & filters.command(["logout"]))
 async def logout(_, msg):
     user_data = database.find_one({"chat_id": msg.chat.id})
     if user_data is None or not user_data.get('session'):
@@ -39,7 +39,7 @@ async def logout(_, msg):
     database.update_one({'_id': user_data['_id']}, {'$set': data})
     await msg.reply("**Logout Successfully** ♦")
 
-@Client.on_message(filters.private & ~filters.forwarded & filters.command(["connect"]))
+@Client.on_message(filters.private & ~filters.forwarded & filters.command(["login"]))
 async def main(bot: Client, message: Message):
     database.insert_one({"chat_id": message.from_user.id})
     user_data = database.find_one({"chat_id": message.from_user.id})
