@@ -1,9 +1,9 @@
 import os
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8364352776:AAHKOYUUywleYbgB_o-4H2BPvCIwGHxsZ5Q")
-API_ID = int(os.environ.get("API_ID", "28735699"))
-API_HASH = os.environ.get("API_HASH", "2e19c326d8cb322df7c15d7b7e84d1f3")
-DB_URI = os.environ.get("DB_URI", "mongodb+srv://ridhatlog:RcZ4EVi6hzwSaarZ@cluster0.dxj0ntg.mongodb.net/?retryWrites=true&w=majority")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+API_ID = int(os.environ.get("API_ID", ""))
+API_HASH = os.environ.get("API_HASH", "")
+DB_URI = os.environ.get("DB_URI", "")
 
 ADMINS = list(map(int, os.environ.get("ADMINS", "7618349770 7336381823").split()))
 
